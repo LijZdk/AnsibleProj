@@ -1,0 +1,10 @@
+ssh-keygen -t rsa
+
+ssh-agent bash
+
+ssh-add ~/.ssh/id_rsa
+
+ssh-copy-id vagrant@NODEIP
+
+
+ansible all -i hosts -u vagrant -m setup

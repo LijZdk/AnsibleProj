@@ -1,0 +1,81 @@
+---
+- name: server provisioning
+  hosts: all
+  remote_user: vagrant
+  become: yes
+  vars:
+    download_folder: /opt
+    java_name: "{{download_folder}}/jdk1.8.0_05"
+    java_archive: "{{download_folder}}/jdk-8u5-linux-x64.tar.gz"
+
+  tasks:
+   - name: provisioning
+     apt: name={{item}} state=present
+     with_items:
+      - git
+      - wget
+      - tar
+      - update
+
+   - unarchive:
+        src: /opt/shared/jdk-8u5-linux-x64.tar.gz
+        dest: /opt
+
+   - name: Fix ownership
+     file: state=directory path={{java_name}} owner=root group=root recurse=yes
+
+   - name: Make Java avaliable for system
+     command: 'update-alternatives --install "/usr/bin/java" "java" "{{java_name}}/bin/java" 100'
+
+   - unarchive:
+        src: /opt/shared/maven.tar.gz
+        dest: /opt
+
+   - name: Fix ownership
+     file: state=directory path={{download_folder}}/apache-maven-3.3.9 owner=root group=root recurse=yes
+
+   - name: make maven avaliable for system
+     command: 'update-alternatives --install /usr/bin/mvn mvn /opt/apache-maven-3.3.9/bin/mvn 100'
+
+   - name: Installing jira
+     shell: |
+        cd /opt/shared
+        chmod a+x jira.bin
+        ./jira.bin << EOF
+        y
+
+        o
+
+        1
+
+        8081
+
+        8006
+
+        i
+
+        EOF
+
+   - name: unpackaging/installing Jenkins
+     apt:
+       deb: "/opt/shared/jenkins_2.1_all.deb"
+
+   - name: starting jenkins
+     service: name=jenkins state=started enabled=yes
+
+   - unarchive:
+      src: /opt/shared/nexus-3.0.2-02-unix.tar.gz
+      dest: /opt
+
+   - name: make nexus avaliable to system
+     command: 'update-alternatives --install /usr/bin/nexus nexus /opt/nexus-3.0.2-02/bin/nexus 100'
+
+   - name: run nexus
+     args:
+       chdir: /usr/bin/
+     shell: |
+
+        nexus console
+        nexus start
+        tail -f logs/wrapper.log
+
